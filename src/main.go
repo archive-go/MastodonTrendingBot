@@ -15,7 +15,7 @@ import (
 )
 
 var token string
-var domain []string
+var domains []string
 
 func loadConfig() {
 	err := godotenv.Load()
@@ -23,8 +23,8 @@ func loadConfig() {
 
 	token = os.Getenv("TOKEN")
 	fmt.Println(token)
-	domain = strings.Fields(os.Getenv("DOMAIN"))
-	fmt.Println(domain)
+	domains = strings.Fields(os.Getenv("DOMAIN"))
+	fmt.Println(domains)
 }
 
 func init() {
@@ -32,15 +32,20 @@ func init() {
 }
 
 func main() {
-	addr := "wss://" + "bgme.me" + "/api/v1/streaming/?stream=public:local"
-	ws, res, err := websocket.DefaultDialer.Dial(addr, nil)
+	for _, instance := range domains {
+		listen(instance)
+	}
+}
+
+func listen(domain string) {
+	addr := "wss://" + domain + "/api/v1/streaming/?stream=public:local"
+	ws, _, err := websocket.DefaultDialer.Dial(addr, nil)
 	defer ws.Close()
 	if err != nil {
-		fmt.Println(res)
 		merry.Wrap(err)
 	}
 
-	fmt.Println("连接上WS，持续监听")
+	fmt.Printf("成功连接WS，持续监听实例：%s\n", domain)
 	for {
 		_, body, err := ws.ReadMessage()
 		if err != nil {
@@ -61,6 +66,11 @@ func main() {
 				fmt.Println("err", err.Error())
 			}
 
+			process(status)
 		}
 	}
+}
+
+func process(status mastodon.Status) {
+	fmt.Println(status.Content)
 }
