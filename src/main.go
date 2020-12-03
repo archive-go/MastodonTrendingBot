@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/MakeGolangGreat/mastodon-go"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/ansel1/merry"
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
@@ -23,7 +26,7 @@ func loadConfig() {
 
 	token = os.Getenv("TOKEN")
 	fmt.Println(token)
-	domains = strings.Fields(os.Getenv("DOMAIN"))
+	domains = strings.Fields(os.Getenv("DOMAINS"))
 	fmt.Println(domains)
 }
 
@@ -32,8 +35,14 @@ func init() {
 }
 
 func main() {
+	defer db.Close()
+
+	getAll()
 	for _, instance := range domains {
-		listen(instance)
+		go listen(instance)
+	}
+
+	for {
 	}
 }
 
@@ -66,11 +75,40 @@ func listen(domain string) {
 				fmt.Println("err", err.Error())
 			}
 
-			process(status)
+			process(status, domain)
 		}
 	}
 }
 
-func process(status mastodon.Status) {
-	fmt.Println(status.Content)
+func process(status mastodon.Status, domain string) {
+	fmt.Println(domain, status.Content)
+
+	count := get(domain)
+	newCount, err := strconv.Atoi(count)
+	fmt.Println("domain count is: ", newCount)
+
+	merry.Wrap(err)
+	set(domain, newCount+1)
+	fmt.Println("setted ", get(domain))
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(status.Content))
+	merry.Wrap(err)
+
+	// find tag link
+	doc.Find("a.hashtag").Each(func(_ int, s *goquery.Selection) {
+		href, exists := s.Attr("href")
+		if !exists {
+			return
+		}
+
+		url, err := url.Parse(href)
+		merry.Wrap(err)
+		if url.Host != domain {
+			// 如果链接是当前实例的，那么不会将其备份
+			return
+		}
+
+		// fmt.Println(domain, s.Text())
+	})
+
 }
