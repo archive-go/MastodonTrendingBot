@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MakeGolangGreat/mastodon-go"
 	"github.com/PuerkitoBio/goquery"
@@ -15,20 +16,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
 var token string
 var domains []string
-
-func loadConfig() {
-	err := godotenv.Load()
-	merry.Wrap(err)
-
-	token = os.Getenv("TOKEN")
-	fmt.Println(token)
-	domains = strings.Fields(os.Getenv("DOMAINS"))
-	fmt.Println(domains)
-}
 
 func init() {
 	loadConfig()
@@ -37,13 +29,14 @@ func init() {
 func main() {
 	defer db.Close()
 
-	getAll()
+	cronJob()
+
 	for _, instance := range domains {
 		go listen(instance)
 	}
 
-	for {
-	}
+	// for {} will use 100% cpu.
+	select {}
 }
 
 func listen(domain string) {
@@ -108,7 +101,31 @@ func process(status mastodon.Status, domain string) {
 			return
 		}
 
-		// fmt.Println(domain, s.Text())
+		fmt.Println(domain, s.Text())
 	})
 
+}
+
+func loadConfig() {
+	err := godotenv.Load()
+	merry.Wrap(err)
+
+	token = os.Getenv("TOKEN")
+	fmt.Println(token)
+	domains = strings.Fields(os.Getenv("DOMAINS"))
+	fmt.Println(domains)
+}
+
+func publish() {
+	fmt.Println("beijing 0 dian")
+}
+
+func cronJob() {
+	getAll()
+	spec := "* 0 * * *"
+	secondsEastOfUTC := int((8 * time.Hour).Seconds())
+	beijing := time.FixedZone("Beijing Time", secondsEastOfUTC)
+	c := cron.New(cron.WithLocation(beijing))
+	c.AddFunc(spec, publish)
+	c.Start()
 }
