@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
-	"github.com/robfig/cron/v3"
+	"github.com/robfig/cron"
 )
 
 var token string
@@ -28,10 +27,14 @@ func init() {
 
 func main() {
 	defer db.Close()
-
-	cronJob()
+	// set("#你好", 32)
+	// set("#咋了", 2)
+	// set("#咋了123", 2)
+	// set("#test", 1)
+	// set("#服了你了", 454)
 
 	for _, instance := range domains {
+		cronJob(instance)
 		go listen(instance)
 	}
 
@@ -74,16 +77,6 @@ func listen(domain string) {
 }
 
 func process(status mastodon.Status, domain string) {
-	fmt.Println(domain, status.Content)
-
-	count := get(domain)
-	newCount, err := strconv.Atoi(count)
-	fmt.Println("domain count is: ", newCount)
-
-	merry.Wrap(err)
-	set(domain, newCount+1)
-	fmt.Println("setted ", get(domain))
-
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(status.Content))
 	merry.Wrap(err)
 
@@ -101,7 +94,8 @@ func process(status mastodon.Status, domain string) {
 			return
 		}
 
-		fmt.Println(domain, s.Text())
+		count := get(s.Text())
+		set(s.Text(), count+1)
 	})
 
 }
@@ -111,21 +105,47 @@ func loadConfig() {
 	merry.Wrap(err)
 
 	token = os.Getenv("TOKEN")
-	fmt.Println(token)
 	domains = strings.Fields(os.Getenv("DOMAINS"))
-	fmt.Println(domains)
 }
 
-func publish() {
-	fmt.Println("beijing 0 dian")
+func publish(domain string) {
+	tags := getAll()
+	toot := &mastodon.Mastodon{
+		Token:  token,
+		Domain: "https://" + domain,
+	}
+
+	var content string
+	for i := 0; i < min(len(tags), 10); i++ {
+		content += fmt.Sprintf("%d. %s\n", i+1, tags[i].name)
+	}
+	var status string
+	if len(tags) == 0 {
+		status = "今天居然没有一个人使用标签，我一个Bot能怎么办？\n\n标签用起来呀，朋友们～"
+	} else {
+		status = fmt.Sprintf("%s 的兄弟姐妹们晚上好，我来为大家播报本站今日热门（排名有先后）：\n\n%s\n\n为了让本Bot能如实还原热门趋势情况，还请大家多使用“标签”功能！", domain, content)
+	}
+
+	_, err := toot.SendStatuses(&mastodon.StatusParams{
+		Status:     status,
+		MediaIds:   "[]",
+		Poll:       "[]",
+		Visibility: "private",
+		Sensitive:  false,
+	})
+	merry.Wrap(err)
 }
 
-func cronJob() {
-	getAll()
-	spec := "* 0 * * *"
+func cronJob(domain string) {
+	// 每天的零点零分零秒
+	spec := "0 0 0 * * *"
 	secondsEastOfUTC := int((8 * time.Hour).Seconds())
 	beijing := time.FixedZone("Beijing Time", secondsEastOfUTC)
-	c := cron.New(cron.WithLocation(beijing))
-	c.AddFunc(spec, publish)
+	c := cron.NewWithLocation(beijing)
+	// c := cron.New()
+	c.AddFunc(spec, func() {
+		fmt.Print(3)
+		publish(domain)
+	})
 	c.Start()
 }

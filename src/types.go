@@ -11,4 +11,9 @@ type (
 		Event   string      `json:"event"`
 		Payload interface{} `json:"payload"`
 	}
+
+	Tag struct {
+		name  string
+		count int
+	}
 )
