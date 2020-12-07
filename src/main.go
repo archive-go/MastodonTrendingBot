@@ -23,15 +23,14 @@ var domains []string
 
 func init() {
 	loadConfig()
+	if len(domains) == 0 || token == "" {
+		color.Red("Missing domains/token")
+		log.Fatal()
+	}
 }
 
 func main() {
 	defer db.Close()
-	// set("#你好", 32)
-	// set("#咋了", 2)
-	// set("#咋了123", 2)
-	// set("#test", 1)
-	// set("#服了你了", 454)
 
 	for _, instance := range domains {
 		cronJob(instance)
@@ -71,6 +70,7 @@ func listen(domain string) {
 				fmt.Println("err", err.Error())
 			}
 
+			fmt.Println("Status ID:", status.ID, status.Account.UserName)
 			process(status, domain)
 		}
 	}
@@ -95,7 +95,7 @@ func process(status mastodon.Status, domain string) {
 		}
 
 		count := get(s.Text())
-		set(s.Text(), count+1)
+		set(s.Text(), count+1, domain)
 	})
 
 }

@@ -18,7 +18,6 @@ func init() {
 }
 
 func get(key string) (value int) {
-	fmt.Println("get", key)
 	data, err := db.Get([]byte(key), nil)
 	merry.Wrap(err)
 	count, err := strconv.Atoi(string(data))
@@ -27,8 +26,8 @@ func get(key string) (value int) {
 
 }
 
-func set(key string, value int) {
-	fmt.Println("set", key, value)
+func set(key string, value int, domain string) {
+	fmt.Println("set", key, value, domain)
 	err := db.Put([]byte(key), []byte(strconv.Itoa(value)), nil)
 	merry.Wrap(err)
 }
