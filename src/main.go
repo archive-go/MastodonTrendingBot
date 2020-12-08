@@ -70,7 +70,14 @@ func listen(domain string) {
 				fmt.Println("err", err.Error())
 			}
 
-			fmt.Println("Status ID:", status.ID, status.Account.UserName)
+			fmt.Println("Status ID:", status.ID, status.Account.UserName, status.Account.URL)
+
+			link, err := url.Parse(status.Account.URL)
+			merry.Wrap(err)
+
+			if link.Host != domain {
+				break
+			}
 			process(status, domain)
 		}
 	}
@@ -87,9 +94,9 @@ func process(status mastodon.Status, domain string) {
 			return
 		}
 
-		url, err := url.Parse(href)
+		link, err := url.Parse(href)
 		merry.Wrap(err)
-		if url.Host != domain {
+		if link.Host != domain {
 			// 如果链接是当前实例的，那么不会将其备份
 			return
 		}
