@@ -20,6 +20,7 @@ import (
 
 var token string
 var domains []string
+var blackList []string
 
 func init() {
 	loadConfig()
@@ -75,9 +76,11 @@ func listen(domain string) {
 			link, err := url.Parse(status.Account.URL)
 			merry.Wrap(err)
 
-			if link.Host != domain {
+			// 如果不是当前实例的嘟文，或者发嘟用户在黑名单中
+			if link.Host != domain || contains(blackList, status.Account.UserName) {
 				break
 			}
+
 			process(status, domain)
 		}
 	}
@@ -96,13 +99,16 @@ func process(status mastodon.Status, domain string) {
 
 		link, err := url.Parse(href)
 		merry.Wrap(err)
-		if link.Host != domain {
-			// 如果链接是当前实例的，那么不会将其备份
+
+		tag := s.Text()
+		// 如果标签中每一个中文字符，return
+		// 如果链接是当前实例的，return
+		if link.Host != domain || !hasHan(tag) {
 			return
 		}
 
-		count := get(s.Text())
-		set(s.Text(), count+1, domain)
+		count := get(tag)
+		set(tag, count+1, domain)
 	})
 
 }
@@ -113,6 +119,7 @@ func loadConfig() {
 
 	token = os.Getenv("TOKEN")
 	domains = strings.Fields(os.Getenv("DOMAINS"))
+	blackList = strings.Fields(os.Getenv("BLACKLIST"))
 }
 
 func publish(domain string) {
