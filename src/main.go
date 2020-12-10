@@ -152,7 +152,7 @@ func publish(domain string) {
 
 func cronJob(domain string) {
 	// 每天的零点零分零秒
-	spec := "0 0 */4 * * *"
+	spec := "0 0 0 * * *"
 	secondsEastOfUTC := int((8 * time.Hour).Seconds())
 	beijing := time.FixedZone("Beijing Time", secondsEastOfUTC)
 	c := cron.NewWithLocation(beijing)
