@@ -144,7 +144,7 @@ func publish(domain string) {
 		Status:     status,
 		MediaIds:   "[]",
 		Poll:       "[]",
-		Visibility: "private",
+		Visibility: "public",
 		Sensitive:  false,
 	})
 	merry.Wrap(err)
